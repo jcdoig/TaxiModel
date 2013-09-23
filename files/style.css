@@ -1,0 +1,140 @@
+/*elements*/
+
+body {
+  font-family: "Helvetica Neue", Helvetica, sans-serif;
+  margin: auto;
+  margin-top: 40px;
+  margin-bottom: 4em;
+  width: 900px;
+  text-align: center;
+}
+
+p {
+	text-align:justify;
+	text-justify:inter-word;
+}
+
+li {
+  width: 680px;
+}
+
+a {
+  color: steelblue;
+}
+
+a:not(:hover) {
+  text-decoration: none;
+}
+
+pre, code, textarea {
+  font-family: "Menlo", monospace;
+}
+
+code {
+  line-height: 1em;
+}
+
+textarea {
+  font-size: 100%;
+}
+
+svg {
+  font: 10px sans-serif;
+}
+
+
+sup, sub {
+  line-height: 0;
+}
+
+q:before,
+blockquote:before {
+  content: "â€œ";
+}
+
+q:after,
+blockquote:after {
+  content: "â€";
+}
+
+blockquote:before {
+  position: absolute;
+  left: 2em;
+}
+
+blockquote:after {
+  position: absolute;
+}
+
+h1 {
+  font-size: 96px;
+  margin-top: .3em;
+  margin-bottom: 0;
+}
+
+h1 + h2 {
+  margin-top: 0;
+}
+
+h2 {
+  font-weight: 400;
+  font-size: 28px;
+}
+
+h1, h2 {
+  font-family: "Yanone Kaffeesatz";
+  text-rendering: optimizeLegibility;
+}
+
+/*Classes*/
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.x.axis path {
+  display: none;
+}
+
+.area {
+  fill: steelblue;
+}
+
+
+
+#menu {
+	pointer-events: none;
+	position:fixed;
+	top:65%;
+	left:0%;
+	width: 100%;
+	height: 100%;
+	text-align:center;
+}
+
+#menu div{
+  border: 2px solid silver;
+  background-color: whitesmoke;
+  opacity: 0.9;
+	display: inline-block;
+  height: 100%;
+	border-radius: 1em;
+	text-align:center;
+	padding: 1em;
+}
+
+
+#legend {
+	pointer-events: none;
+	position:fixed;
+	top:2em;
+	right:1em;
+	width: 5em;
+	height: 15em;
+	text-align:center;
+  border: 2px solid silver;
+  background-color: whitesmoke;
+  opacity: 0.9;
+}

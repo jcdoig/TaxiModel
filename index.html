@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Learning</title>
+  
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta charset="utf-8">
+
+  <script src="./files/d3.v3.min.js"></script>
+  
+  <style type="text/css">
+  @import url(./files/style.css);
+  @import url(//fonts.googleapis.com/css?family=Yanone+Kaffeesatz:400,700);
+  </style>
+
+</head>
+
+<body>
+
+<svg xmlns:svg="http://www.w3.org/2000/svg" id="display" width="550" height="550">
+  <g id="svg">
+    <foreignObject xmlns="http://www.w3.org/2000/svg" height="500" width="500" y="25" x="25">
+      <canvas id="canvas" xmlns="http://www.w3.org/1999/xhtml" width="500" height="500">
+      
+      </canvas>
+    </foreignObject>
+  </g>
+</svg>
+<script type='text/javascript'>
+  var width,
+    height,
+    Family = {}
+
+
+  
+
+  Taxis = []
+  function Taxi(){
+    Taxis.push(this)
+    this.id = Taxis.indexOf(this)
+    this.ox = Math.floor((Math.random()*width)+1);
+    this.oy = Math.floor((Math.random()*height)+1);
+    this.dx = this.ox;
+    this.dy = this.oy;
+    this.pool = "iddle"
+    this.orientation = 0;
+    this.dropoffTime = 0
+    this.passenger = null;
+    this.iddle = 0;
+    this.distanceLeft = 0;
+  }
+
+  Passengers = []
+  function Passenger(){
+    Passengers.push(this)
+    this.id = Passengers.indexOf(this)
+    this.ox = Math.floor((Math.random()*width)+1);
+    this.oy = Math.floor((Math.random()*height)+1);
+    this.taxi = null;
+    this.timeCreated = new Date().getTime()
+    this.waiting = 0;
+    this.onTaxi = false
+    this.dead = false;
+    this.dx = Math.floor((Math.random()*width)+1);
+    this.dy = Math.floor((Math.random()*height)+1);
+    this.remove = function(){
+      var array = Passengers;
+      var index = array.indexOf(this);
+      if (index > -1) {
+       array.splice(index, 1);
+      }
+    }
+  }
+
+  width = 500
+  height = 500
+
+  // model parameters
+
+  var speed = 50 // in pixels per millisecond, or something else, I need to think
+  var demand = 5 // in passengers per millisecond. I need to convert it to a random process
+  var fleet = 50 // number of taxis
+
+
+  function distance(passenger, taxi){
+    return Math.sqrt( (passenger.ox - taxi.dx)*(passenger.ox - taxi.dx) + (passenger.oy - taxi.dy)*(passenger.oy - taxi.dy) )
+  }
+
+  function paintServiceArea(Taxi){
+
+  }
+
+
+  var fEvents = [] // future events
+  var pEvents = [] // past events
+  var stopTime = 1000
+
+  function createTaxis(){
+    for (var i = 0; i < 5; i++) {
+      var taxi = new Taxi()
+    };
+  }
+
+  function Event(agent, time, run, description){
+    this.Agent = agent
+    this.Time = time
+    this.Run = run
+    this.Description = description
+    return this
+  }
+  function createPassenger(time){
+    var delta = Math.floor((Math.random()*500)+1)
+    var pass = new Passenger()
+    function run(){
+      assignTaxi(pass, time+delta)
+
+      createPassenger(time+delta)
+    }
+    var event = new Event(pass, time+delta, run, "Passenger Demand")
+    fEvents.push(event)
+  }
+
+  function assignTaxi(passenger, time){
+    var availableTaxis = Taxis.filter(function(taxi){ return (taxi.pool === "iddle") || (taxi.pool === "inServiceAvailabe")})
+    
+    availableTaxis.sort(function(a,b){
+      var AtimeLeft = Math.max(a.dropoffTime - time, 0)
+      var BtimeLeft = Math.max(b.dropoffTime - time, 0)
+      return distance(passenger, a)/speed + AtimeLeft - distance(passenger, b)/speed - BtimeLeft
+    })
+    
+    try {
+      taxi = availableTaxis[0]
+      if (taxi.pool === "inServiceAvailabe") {
+        taxi.pool = "inServiceUnavailabe"
+        console.log("Taxi " + taxi.id + " will drop off passenger " + taxi.passenger.id + " then it will pickup passenger " + passenger.id )  
+      } else {
+        taxi.pool = "inServiceAvailabe"
+        console.log("Taxi " + taxi.id + " on route to pickup passenger " + passenger.id  )
+      }
+      taxi.passenger = passenger
+      passenger.taxi = taxi
+
+    } catch(err) {
+
+    }
+
+
+    // select the closest taxi to be assigned
+    // move the passenger to the waiting for pickup pool
+    // remove the taxi from the current pool and move it to the one where it belongs now
+    // set an event to be excecuted when the taxi picks up the passenger (pickup passenger)
+  }
+
+  function pickupTaxi(){
+    // move the passenger to the traveling pool
+    // remove the taxi from the current pool and move it to the one where it belongs now
+    // set an event to be excecuted when the taxi drops off the passenger
+  }
+
+  function dropoffTaxi(){
+    // remove the taxi from the current pool and move it to the one where it belongs now
+    // move the passenger to the happy customer pool
+  }
+  console.log(new Date())
+  createPassenger(0)
+  createTaxis()
+  d3.timer(function(){
+    fEvents.sort(function(a,b){return a.time-b.time})
+    var event = fEvents.shift()
+    event.Run()
+    pEvents.push(event)
+
+    var should_stop
+    try {
+      should_stop = (fEvents[0].Time > stopTime)
+    } catch(err) {
+      should_stop = false
+    }
+    if (should_stop) {console.log(new Date())}
+    return should_stop
+  })
+</script>
+</body>
+
+</html>
