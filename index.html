@@ -46,6 +46,7 @@
     this.orientation = 0;
     this.dropoffTime = 0
     this.passenger = null;
+    this.passengerNext = null;
     this.iddle = 0;
     this.distanceLeft = 0;
   }
@@ -108,15 +109,15 @@
     this.Description = description
     return this
   }
-  function createPassenger(time){
+  function eventPassenger(time){ // creates an event to be excecuted at time "time"
     var delta = Math.floor((Math.random()*500)+1)
     var pass = new Passenger()
     function run(){
-      assignTaxi(pass, time+delta)
+      assignTaxi(pass, time) // assigns this passenger
 
-      createPassenger(time+delta)
+      eventPassenger(time+delta) // creates the next passenger event
     }
-    var event = new Event(pass, time+delta, run, "Passenger Demand")
+    var event = new Event(pass, time, run, "New customer")
     fEvents.push(event)
   }
 
@@ -128,42 +129,43 @@
       var BtimeLeft = Math.max(b.dropoffTime - time, 0)
       return distance(passenger, a)/speed + AtimeLeft - distance(passenger, b)/speed - BtimeLeft
     })
-    
+    var taxi
     try {
       taxi = availableTaxis[0]
       if (taxi.pool === "inServiceAvailabe") {
         taxi.pool = "inServiceUnavailabe"
-        console.log("Taxi " + taxi.id + " will drop off passenger " + taxi.passenger.id + " then it will pickup passenger " + passenger.id )  
-      } else {
+        console.log("Taxi " + taxi.id + " will drop off passenger " + taxi.passenger.id + " then it will pickup passenger " + passenger.id )
+        taxi.passengerNext = passenger
+                
+        //create dropoff event 
+      } else { // this means the taxi is iddle
         taxi.pool = "inServiceAvailabe"
         console.log("Taxi " + taxi.id + " on route to pickup passenger " + passenger.id  )
+        taxi.passenger = passenger
+
+        //create dropoff event
       }
-      taxi.passenger = passenger
       passenger.taxi = taxi
+      eventPickUp(taxi, passenger)
 
     } catch(err) {
-
+      console.log("no taxis")
     }
-
-
-    // select the closest taxi to be assigned
-    // move the passenger to the waiting for pickup pool
-    // remove the taxi from the current pool and move it to the one where it belongs now
-    // set an event to be excecuted when the taxi picks up the passenger (pickup passenger)
+    return taxi
   }
 
-  function pickupTaxi(){
+  function eventPickUp(taxi, passenger){
     // move the passenger to the traveling pool
     // remove the taxi from the current pool and move it to the one where it belongs now
     // set an event to be excecuted when the taxi drops off the passenger
   }
 
-  function dropoffTaxi(){
+  function eventDropOff(taxi, passenger){
     // remove the taxi from the current pool and move it to the one where it belongs now
     // move the passenger to the happy customer pool
   }
   console.log(new Date())
-  createPassenger(0)
+  eventPassenger(0)
   createTaxis()
   d3.timer(function(){
     fEvents.sort(function(a,b){return a.time-b.time})
