@@ -89,16 +89,17 @@
   width = 500
   height = 500
   var speed = 50 // in pixels per millisecond, or something else, I need to think
-  var demand = 5 // in passengers per millisecond. I need to convert it to a random process
+  var lambda = 5 // in passengers per millisecond per area. I need to convert it to a random process
   var fleet = 50 // number of taxis
 
 
   function distance(passenger, taxi){
+    //TODO: Change to a torus configuration
     return Math.sqrt( (passenger.ox - taxi.dx)*(passenger.ox - taxi.dx) + (passenger.oy - taxi.dy)*(passenger.oy - taxi.dy) )
   }
 
   function paintServiceArea(Taxi){
-
+    //TODO: UI stuff
   }
 
 
@@ -121,11 +122,10 @@
   }
 
   function eventPassenger(time){ // creates an event to be excecuted at time "time"
-    var delta = Math.floor((Math.random()*500)+1)
+    var delta = Math.log(1-(Math.random())/(-lambda/(width*height))
     var pass = new Passenger()
     function run(){
       assignTaxi(pass, time) // assigns this passenger
-
       eventPassenger(time+delta) // creates the next passenger event
     }
     var event = new Event(pass, time, run, "New customer")
@@ -133,36 +133,31 @@
   }
 
   function assignTaxi(passenger, time){
-    var availableTaxis = Taxis.filter(function(taxi){ return (taxi.state === "idle") || (taxi.state === "inServiceAvailabe")})
-    
-    availableTaxis.sort(function(a,b){
-      var AtimeLeft = Math.max(a.dropoffTime - time, 0)
-      var BtimeLeft = Math.max(b.dropoffTime - time, 0)
-      return distance(passenger, a)/speed + AtimeLeft - distance(passenger, b)/speed - BtimeLeft
-    })
-    var taxi
-    try {
+    var availableTaxis = Taxis.filter(function(taxi){ return (taxi.state === taxiState.IDLE) || (taxi.state === taxiState.IN_SERVICE_AVAILABLE)})
+    if (availableTaxis.length >= 1){
+      availableTaxis.sort(function(a,b){
+        var AtimeLeft = Math.max(a.dropoffTime - time, 0)
+        var BtimeLeft = Math.max(b.dropoffTime - time, 0)
+        return distance(passenger, a)/speed + AtimeLeft - distance(passenger, b)/speed - BtimeLeft
+      })
+      var taxi
       taxi = availableTaxis[0]
-      if (taxi.state === "inServiceAvailabe") {
-        taxi.state = "inServiceUnavailabe"
+      if (taxi.state === taxiState.IN_SERVICE_AVAILABLE) {
+        taxi.state = taxiState.IN_SERVICE_ASSIGNED
         console.log("Taxi " + taxi.id + " will drop off passenger " + taxi.passenger.id + " then it will pickup passenger " + passenger.id )
-        taxi.passengerNext = passenger
-                
-        //create dropoff event 
+        taxi.passengerNext = passenger 
       } else { // this means the taxi is idle
-        taxi.state = "inServiceAvailabe"
+        taxi.state = taxiState.ASSIGNED
         console.log("Taxi " + taxi.id + " on route to pickup passenger " + passenger.id  )
-        taxi.passenger = passenger
-
-        //create dropoff event
+        taxi.passengerNext = passenger
+        passenger.taxi = taxi
+        eventPickUp(taxi, passenger)
+        taxi.dx = passenger.ox
+        taxi.dy = passenger.oy
       }
-      passenger.taxi = taxi
-      eventPickUp(taxi, passenger)
-
-    } catch(err) {
-      console.log("no taxis available")
+    } else {
+      // El pasajero se va a la cola
     }
-    return taxi
   }
 
   function eventPickUp(taxi, passenger){
