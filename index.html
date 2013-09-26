@@ -50,44 +50,44 @@
   function Taxi(){
     Taxis.push(this)
     this.id = Taxis.indexOf(this)
-    this.ox = Math.floor((Math.random()*width)+1);
-    this.oy = Math.floor((Math.random()*height)+1);
-    this.dx = this.ox;
-    this.dy = this.oy;
-    this.state = "idle" // all taxis are initialized as idle, possible values are idle, assigned, inServiceAvailable, and inServiceUnavailable
-    this.orientation = 0;
+    this.ox = Math.floor((Math.random()*width)+1)
+    this.oy = Math.floor((Math.random()*height)+1)
+    this.dx = this.ox
+    this.dy = this.oy
+    this.state = taxiState.IDLE // all taxis are initialized as idle, possible values are idle, assigned, inServiceAvailable, and inServiceUnavailable
     this.dropoffTime = 0
-    this.passenger = null;
-    this.passengerNext = null;
-    this.idle = 0;
-    this.distanceLeft = 0;
+    this.passengerNow = null
+    this.passengerNext = null
+    this.distanceLeft = 0
   }
 
-  Passengers = []
-  function Passenger(){
-    Passengers.push(this)
-    this.id = Passengers.indexOf(this)
-    this.ox = Math.floor((Math.random()*width)+1);
-    this.oy = Math.floor((Math.random()*height)+1);
-    this.taxi = null;
-    this.timeCreated = new Date().getTime()
+  numPax = 0;
+  ActivePassengers = []
+  ServedPassengers = []
+  function Passenger(time){
+    ActivePassengers.push(this)
+    numPax++
+    this.id = numPax
+    this.ox = Math.floor((Math.random()*width)+1)
+    this.oy = Math.floor((Math.random()*height)+1)
+    this.taxi = null
+    this.timeCreated = time
     this.waiting = 0;
-    this.dx = Math.floor((Math.random()*width)+1);
-    this.dy = Math.floor((Math.random()*height)+1);
-    this.remove = function(){
-      var array = Passengers;
-      var index = array.indexOf(this);
+    this.dx = Math.floor((Math.random()*width)+1)
+    this.dy = Math.floor((Math.random()*height)+1)
+    this.drop_off = function(){ // To be called after dropping the pax
+      var array = ActivePassengers
+      var index = array.indexOf(this)
       if (index > -1) {
-       array.splice(index, 1);
+       array.splice(index, 1)
+       ServedPassengers.push(this)
       }
     }
   }
 
+  // model parameters
   width = 500
   height = 500
-
-  // model parameters
-
   var speed = 50 // in pixels per millisecond, or something else, I need to think
   var demand = 5 // in passengers per millisecond. I need to convert it to a random process
   var fleet = 50 // number of taxis
