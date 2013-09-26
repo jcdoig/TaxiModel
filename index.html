@@ -32,7 +32,19 @@
     Family = {}
 
 
-  
+  personState = {
+    NOT_ASSIGNED : 0,
+    ASSIGNED : 1,
+    IN_SERVICE : 2,
+    SERVED : 3
+  }
+
+  taxiState = {
+    IDLE : 0,
+    ASSIGNED : 1,
+    IN_SERVICE_AVAILABLE : 2,
+    IN_SERVICE_ASSIGNED : 3
+  }
 
   Taxis = []
   function Taxi(){
@@ -42,12 +54,12 @@
     this.oy = Math.floor((Math.random()*height)+1);
     this.dx = this.ox;
     this.dy = this.oy;
-    this.pool = "iddle"
+    this.state = "idle" // all taxis are initialized as idle, possible values are idle, assigned, inServiceAvailable, and inServiceUnavailable
     this.orientation = 0;
     this.dropoffTime = 0
     this.passenger = null;
     this.passengerNext = null;
-    this.iddle = 0;
+    this.idle = 0;
     this.distanceLeft = 0;
   }
 
@@ -60,8 +72,6 @@
     this.taxi = null;
     this.timeCreated = new Date().getTime()
     this.waiting = 0;
-    this.onTaxi = false
-    this.dead = false;
     this.dx = Math.floor((Math.random()*width)+1);
     this.dy = Math.floor((Math.random()*height)+1);
     this.remove = function(){
@@ -94,7 +104,7 @@
 
   var fEvents = [] // future events
   var pEvents = [] // past events
-  var stopTime = 1000
+  var stopTime = 10000
 
   function createTaxis(){
     for (var i = 0; i < 5; i++) {
@@ -109,6 +119,7 @@
     this.Description = description
     return this
   }
+
   function eventPassenger(time){ // creates an event to be excecuted at time "time"
     var delta = Math.floor((Math.random()*500)+1)
     var pass = new Passenger()
@@ -122,7 +133,7 @@
   }
 
   function assignTaxi(passenger, time){
-    var availableTaxis = Taxis.filter(function(taxi){ return (taxi.pool === "iddle") || (taxi.pool === "inServiceAvailabe")})
+    var availableTaxis = Taxis.filter(function(taxi){ return (taxi.state === "idle") || (taxi.state === "inServiceAvailabe")})
     
     availableTaxis.sort(function(a,b){
       var AtimeLeft = Math.max(a.dropoffTime - time, 0)
@@ -132,14 +143,14 @@
     var taxi
     try {
       taxi = availableTaxis[0]
-      if (taxi.pool === "inServiceAvailabe") {
-        taxi.pool = "inServiceUnavailabe"
+      if (taxi.state === "inServiceAvailabe") {
+        taxi.state = "inServiceUnavailabe"
         console.log("Taxi " + taxi.id + " will drop off passenger " + taxi.passenger.id + " then it will pickup passenger " + passenger.id )
         taxi.passengerNext = passenger
                 
         //create dropoff event 
-      } else { // this means the taxi is iddle
-        taxi.pool = "inServiceAvailabe"
+      } else { // this means the taxi is idle
+        taxi.state = "inServiceAvailabe"
         console.log("Taxi " + taxi.id + " on route to pickup passenger " + passenger.id  )
         taxi.passenger = passenger
 
@@ -149,21 +160,22 @@
       eventPickUp(taxi, passenger)
 
     } catch(err) {
-      console.log("no taxis")
+      console.log("no taxis available")
     }
     return taxi
   }
 
   function eventPickUp(taxi, passenger){
-    // move the passenger to the traveling pool
-    // remove the taxi from the current pool and move it to the one where it belongs now
+    // move the passenger to the traveling state
+    // remove the taxi from the current state and move it to the one where it belongs now
     // set an event to be excecuted when the taxi drops off the passenger
   }
 
   function eventDropOff(taxi, passenger){
-    // remove the taxi from the current pool and move it to the one where it belongs now
-    // move the passenger to the happy customer pool
+    // remove the taxi from the current state and move it to the one where it belongs now
+    // move the passenger to the happy customer state
   }
+  
   console.log(new Date())
   eventPassenger(0)
   createTaxis()
