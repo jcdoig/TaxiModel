@@ -98,6 +98,10 @@
     return Math.sqrt( (passenger.ox - taxi.dx)*(passenger.ox - taxi.dx) + (passenger.oy - taxi.dy)*(passenger.oy - taxi.dy) )
   }
 
+  function distanceTravel(taxi){
+    return Math.sqrt( (taxi.dx - taxi.ox) * (taxi.dx -taxi.ox) + (taxi.dy -taxi.oy) * (taxi.dy -taxi.oy) )
+  }
+
   function paintServiceArea(Taxi){
     //TODO: UI stuff
   }
@@ -107,28 +111,31 @@
   var pEvents = [] // past events
   var stopTime = 10000
 
+  var AddEvent = {}
+  var passengerQueue = []
+
   function createTaxis(){
     for (var i = 0; i < 5; i++) {
       var taxi = new Taxi()
     };
   }
 
-  function Event(agent, time, run, description){
-    this.Agent = agent
+  function Event(time, run, description){
     this.Time = time
     this.Run = run
     this.Description = description
     return this
   }
 
-  function eventPassenger(time){ // creates an event to be excecuted at time "time"
+  AddEvent.newPassenger = function(time) {
+  //function eventPassenger(time){ // creates an event to be excecuted at time "time"
     var delta = Math.log(1-(Math.random())/(-lambda/(width*height))
     var pass = new Passenger()
     function run(){
       assignTaxi(pass, time) // assigns this passenger
       eventPassenger(time+delta) // creates the next passenger event
     }
-    var event = new Event(pass, time, run, "New customer")
+    var event = new Event(time, run, "New customer")
     fEvents.push(event)
   }
 
@@ -151,28 +158,72 @@
         console.log("Taxi " + taxi.id + " on route to pickup passenger " + passenger.id  )
         taxi.passengerNext = passenger
         passenger.taxi = taxi
-        eventPickUp(taxi, passenger)
+        pickup_time = distance (passenger, taxi) / speed + time
         taxi.dx = passenger.ox
         taxi.dy = passenger.oy
+
+        AddEvent.pickUp(taxi, passenger, pickup_time)
+        
+        
       }
     } else {
-      // El pasajero se va a la cola
+      passengerQueue.push(passenger)
     }
   }
 
-  function eventPickUp(taxi, passenger){
-    // move the passenger to the traveling state
-    // remove the taxi from the current state and move it to the one where it belongs now
-    // set an event to be excecuted when the taxi drops off the passenger
+  AddEvent.pickUp = function(taxi, passenger, time){
+    function run(){
+      // what happens at the given time
+      taxi.ox = passenger.ox
+      taxi.oy = passenger.oy
+      taxi.dx = passenger.dx
+      taxi.dy = passenger.dy
+
+      taxi.state = taxiState.IN_SERVICE_AVAILABLE
+
+      taxi.dropoffTime = distanceTravel(taxi) / speed + time
+      taxi.passengerNext = null
+
+      // what happens in the future
+      AddEvent.dropOff(taxi, passenger, taxi.dropoffTime)
+    }
+
+    var event = new Event(time, run, "Passenger pickup")
+    fEvents.push(event)
   }
 
-  function eventDropOff(taxi, passenger){
+  AddEvent.dropOff = function(taxi, passenger, time){
     // remove the taxi from the current state and move it to the one where it belongs now
     // move the passenger to the happy customer state
+    function run(){
+      // what happens at the given time
+      
+      // if the taxi has a passengerNext setup a pickup event
+
+      // else check the queue and assign the closest passenger
+
+      // else stay where you are
+
+      if (taxi.passengerNext != null)
+      taxi.ox = taxi.dx
+      taxi.oy = taxi.dy
+
+      taxi.state = taxiState.IN_SERVICE_AVAILABLE
+
+      taxi.dropoffTime = distanceTravel(taxi) / speed + time
+      taxi.passengerNext = null
+
+      // what happens in the future
+      AddEvent.dropOff(taxi, passenger, taxi.dropoffTime)
+    }
+
+    var event = new Event(time, run, "Passenger drop off")
+    fEvents.push(event)
   }
   
   console.log(new Date())
-  eventPassenger(0)
+  
+  AddEvent.newPassenger(0)
   createTaxis()
   d3.timer(function(){
     fEvents.sort(function(a,b){return a.time-b.time})
