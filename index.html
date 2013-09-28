@@ -88,8 +88,11 @@
   // model parameters
   width = 500
   height = 500
-  var speed = 50 // in pixels per millisecond, or something else, I need to think
-  var lambda = 5 // in passengers per millisecond per area. I need to convert it to a random process
+  var speed = 0.5 // in pixels per millisecond, or something else, I need to think
+  // var lambda = 0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001 // in passengers per millisecond per area. I need to convert it to a random process
+  
+  var lambda = 0.0000000000000000000000000000000001 // in passengers per millisecond per area. I need to convert it to a random process
+
   var fleet = 50 // number of taxis
 
 
@@ -112,11 +115,13 @@
   var stopTime = 10000
 
   var AddEvent = {}
+  var Action = {}
   var passengerQueue = []
 
   function createTaxis(){
-    for (var i = 0; i < 5; i++) {
+    for (var i = 0; i < 2; i++) {
       var taxi = new Taxi()
+      Action.goIdle(taxi)
     };
   }
 
@@ -129,60 +134,64 @@
 
   AddEvent.newPassenger = function(time) {
   //function eventPassenger(time){ // creates an event to be excecuted at time "time"
-    var delta = Math.log(1-(Math.random())/(-lambda/(width*height))
+    var delta = Math.log(1-(Math.random())/(-lambda/(width*height)))
+    
     var pass = new Passenger()
+    
     function run(){
-      assignTaxi(pass, time) // assigns this passenger
-      eventPassenger(time+delta) // creates the next passenger event
+      assignTaxi(pass, time) // assigns this passenger to a taxi, if there is no taxi available adds the passenger to the queue
+      AddEvent.newPassenger(time+delta) // creates the next passenger event
     }
-    var event = new Event(time, run, "New customer")
+
+    var event = new Event(time, run, "New passenger")
     fEvents.push(event)
   }
 
   function assignTaxi(passenger, time){
     var availableTaxis = Taxis.filter(function(taxi){ return (taxi.state === taxiState.IDLE) || (taxi.state === taxiState.IN_SERVICE_AVAILABLE)})
+    
     if (availableTaxis.length >= 1){
       availableTaxis.sort(function(a,b){
         var AtimeLeft = Math.max(a.dropoffTime - time, 0)
         var BtimeLeft = Math.max(b.dropoffTime - time, 0)
         return distance(passenger, a)/speed + AtimeLeft - distance(passenger, b)/speed - BtimeLeft
       })
-      var taxi
-      taxi = availableTaxis[0]
+      var taxi = availableTaxis[0]
       if (taxi.state === taxiState.IN_SERVICE_AVAILABLE) {
         taxi.state = taxiState.IN_SERVICE_ASSIGNED
         console.log("Taxi " + taxi.id + " will drop off passenger " + taxi.passenger.id + " then it will pickup passenger " + passenger.id )
         taxi.passengerNext = passenger 
-      } else { // this means the taxi is idle
-        taxi.state = taxiState.ASSIGNED
-        console.log("Taxi " + taxi.id + " on route to pickup passenger " + passenger.id  )
-        taxi.passengerNext = passenger
-        passenger.taxi = taxi
-        pickup_time = distance (passenger, taxi) / speed + time
-        taxi.dx = passenger.ox
-        taxi.dy = passenger.oy
-
-        AddEvent.pickUp(taxi, passenger, pickup_time)
+      } else { // this means the taxi was idle
+        taxi.passenger = passenger
+        Action.gotoPassenger(taxi, time)
+        
+        AddEvent.pickUp(taxi, passenger, taxi.pickupTime)
         
         
       }
     } else {
       passengerQueue.push(passenger)
+      console.log("Passenger " + passenger.id + " is waiting for the next available taxi")
     }
+  }
+
+  Action.deliverPassenger = function(taxi, time) {
+    console.log("Taxi " + taxi.id + " just picked up " + taxi.passenger.id  )
+    taxi.pickupTime = null
+    taxi.ox = taxi.passenger.ox
+    taxi.oy = taxi.passenger.oy
+    taxi.dx = taxi.passenger.dx
+    taxi.dy = taxi.passenger.dy
+
+    taxi.state = taxiState.IN_SERVICE_AVAILABLE
+
+    taxi.dropoffTime = distanceTravel(taxi) / speed + time
   }
 
   AddEvent.pickUp = function(taxi, passenger, time){
     function run(){
       // what happens at the given time
-      taxi.ox = passenger.ox
-      taxi.oy = passenger.oy
-      taxi.dx = passenger.dx
-      taxi.dy = passenger.dy
-
-      taxi.state = taxiState.IN_SERVICE_AVAILABLE
-
-      taxi.dropoffTime = distanceTravel(taxi) / speed + time
-      taxi.passengerNext = null
+      Action.deliverPassenger(taxi, time)      
 
       // what happens in the future
       AddEvent.dropOff(taxi, passenger, taxi.dropoffTime)
@@ -192,31 +201,56 @@
     fEvents.push(event)
   }
 
+  Action.gotoPassenger = function(taxi, time){
+    taxi.ox = taxi.dx
+    taxi.oy = taxi.dy
+    taxi.dx = taxi.passenger.ox
+    taxi.dy = taxi.passenger.oy
+    taxi.pickupTime = distanceTravel(taxi) / speed + time
+    taxi.state = taxiState.ASSIGNED // remember that a taxi assigned cannot be assigned a next passenger until pickup
+    console.log("Taxi " + taxi.id + " on route to pickup passenger " + taxi.passenger.id  )
+  }
+
+  Action.goIdle = function(taxi){
+    taxi.ox = taxi.dx
+    taxi.oy = taxi.dy
+    taxi.state = taxiState.IDLE
+    console.log("Taxi " + taxi.id + " is now idle"  )
+  }
+
   AddEvent.dropOff = function(taxi, passenger, time){
-    // remove the taxi from the current state and move it to the one where it belongs now
-    // move the passenger to the happy customer state
+  
+    // what will happend in the future
     function run(){
-      // what happens at the given time
-      
-      // if the taxi has a passengerNext setup a pickup event
+      taxi.dropoffTime = null
+      console.log("Taxi " + taxi.id + " just drop off passenger "+ taxi.passenger.id  )
+      ServedPassengers.push(taxi.passenger) // move the passenger to the happy customer state
+      taxi.passenger = null      
 
-      // else check the queue and assign the closest passenger
+      if (taxi.passengerNext != null) { // if the taxi has a passengerNext setup a pickup event
+        taxi.passenger = taxi.passengerNext
+        taxi.passengerNext = null
 
-      // else stay where you are
+        Action.gotoPassenger(taxi, time) // remove the taxi from the current state and move it to the one where it belongs now
+        
+        AddEvent.pickUp(taxi, taxi.passenger, taxi.pickupTime)
+      } else { 
+        if (passengerQueue.length > 0) { // else check the queue and assign the closest passenger
+          passengerQueue.sort(function(a,b){
+            return distance(a, taxi)/speed - distance(b, taxi)/speed
+          })
+          taxi.passenger = passengerQueue.shift() // this removes the passenger from the queue while assigning it to the taxi
+          taxi.passenger.taxi = taxi
 
-      if (taxi.passengerNext != null)
-      taxi.ox = taxi.dx
-      taxi.oy = taxi.dy
-
-      taxi.state = taxiState.IN_SERVICE_AVAILABLE
-
-      taxi.dropoffTime = distanceTravel(taxi) / speed + time
-      taxi.passengerNext = null
-
-      // what happens in the future
-      AddEvent.dropOff(taxi, passenger, taxi.dropoffTime)
+          Action.gotoPassenger(taxi, time) // remove the taxi from the current state and move it to the one where it belongs now
+          AddEvent.pickUp(taxi, taxi.passenger, taxi.pickupTime)
+        } else { // else stay where you are
+          Action.goIdle(taxi) // remove the taxi from the current state and move it to the one where it belongs now
+        }
+      }
     }
 
+    // what happens now
     var event = new Event(time, run, "Passenger drop off")
     fEvents.push(event)
   }
@@ -226,14 +260,14 @@
   AddEvent.newPassenger(0)
   createTaxis()
   d3.timer(function(){
-    fEvents.sort(function(a,b){return a.time-b.time})
+    fEvents.sort(function(a,b){return a.Time-b.Time})
     var event = fEvents.shift()
     event.Run()
     pEvents.push(event)
 
     var should_stop
     try {
-      should_stop = (fEvents[0].Time > stopTime)
+      should_stop = (d3.min(fEvents.map(function(d){return d.Time})) > stopTime)
     } catch(err) {
       should_stop = false
     }
