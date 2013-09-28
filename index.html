@@ -133,14 +133,11 @@
   }
 
   AddEvent.newPassenger = function(time) {
-  //function eventPassenger(time){ // creates an event to be excecuted at time "time"
-    var delta = Math.log(1-(Math.random())/(-lambda/(width*height)))
-    
+    var delta = Math.log(1-(Math.random())/(-lambda/(width*height)))    
     var pass = new Passenger()
-    
     function run(){
-      assignTaxi(pass, time) // assigns this passenger to a taxi, if there is no taxi available adds the passenger to the queue
-      AddEvent.newPassenger(time+delta) // creates the next passenger event
+      assignTaxi(pass, time) // (i) attempts to make a taxi assignment if possible (ii) drops the new passenger in the queue
+      AddEvent.newPassenger(time+delta) // creates the next passenger arrival to the system 
     }
 
     var event = new Event(time, run, "New passenger")
@@ -164,10 +161,7 @@
       } else { // this means the taxi was idle
         taxi.passenger = passenger
         Action.gotoPassenger(taxi, time)
-        
         AddEvent.pickUp(taxi, passenger, taxi.pickupTime)
-        
-        
       }
     } else {
       passengerQueue.push(passenger)
@@ -188,12 +182,25 @@
     taxi.dropoffTime = distanceTravel(taxi) / speed + time
   }
 
+  Action.assignAfterPickUp = function(taxi,time){
+    if (passengerQueue.length > 0) { // Check if there's a passenger queue and assign if necessary
+      passengerQueue.sort(function(a,b){
+        return distance(a, taxi)/speed - distance(b, taxi)/speed
+      })
+      taxi.passengerNext = passengerQueue.shift() // Remove the assigned pax from the queue and assign it
+      taxi.passengerNext.taxi = taxi
+      console.log("Taxi " + taxi.id + " just got assigned passenger "+ taxi.passengerNext.id + " right after pickup")
+      taxi.state = taxiState.IN_SERVICE_ASSIGNED // the taxi is now IN_SERVICE_ASSIGNED
+    }
+  }
+
   AddEvent.pickUp = function(taxi, passenger, time){
     function run(){
-      // what happens at the given time
-      Action.deliverPassenger(taxi, time)      
-
-      // what happens in the future
+      // Update the taxi state
+      Action.deliverPassenger(taxi,time)
+      // Try to, immediately after pick up, assign a passenger from the queue
+      Action.assignAfterPickUp(taxi,time) 
+      // This will happen in the future
       AddEvent.dropOff(taxi, passenger, taxi.dropoffTime)
     }
 
@@ -220,12 +227,12 @@
 
   AddEvent.dropOff = function(taxi, passenger, time){
   
-    // what will happend in the future
+    // This will happen in the future
     function run(){
       taxi.dropoffTime = null
-      console.log("Taxi " + taxi.id + " just drop off passenger "+ taxi.passenger.id  )
+      console.log("Taxi " + taxi.id + " just dropped off passenger "+ taxi.passenger.id  )
       ServedPassengers.push(taxi.passenger) // move the passenger to the happy customer state
-      taxi.passenger = null      
+      taxi.passenger = null
 
       if (taxi.passengerNext != null) { // if the taxi has a passengerNext setup a pickup event
         taxi.passenger = taxi.passengerNext
