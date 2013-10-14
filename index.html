@@ -86,16 +86,29 @@
   }
 
   // model parameters
-  width = 500
-  height = 500
-  var speed = 0.5 // in pixels per millisecond, or something else, I need to think
-  // var lambda = 0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001 // in passengers per millisecond per area. I need to convert it to a random process
+
+  var networkWidth = 5 // miles
+  var networkHeight = 5 // miles
+  var networkSpeed = 20 // miles per hour
+  var networkDemand = 300 // passengers per hour
+
+  var stopTime = 1000*3600
+
+  var pixelDensity = 100 // pixels per mile
+
+  var width = networkWidth * pixelDensity
+  var height = networkHeight * pixelDensity
   
-  var lambda = 0.0000000000000000000000000000000001 // in passengers per millisecond per area. I need to convert it to a random process
+  var speed = networkSpeed * pixelDensity / (3600000) // one hour has 3600 sec and each sec has 1000 miliseconds
+
+  var lambda = networkDemand / (3600000) // in passengers per millisecond per network.
 
   var fleet = 50 // number of taxis
 
 
+  d3.select("body").append("p").text("Simulating a network of "+networkWidth+" miles by "+networkHeight+" miles during "+(stopTime/1000)+" seconds")
+  d3.select("body").append("p").text("Fleet size "+fleet+" taxis. Traveling at "+(networkSpeed)+" mph"+". Demand "+networkDemand+" passengers per hour ")
+  
   function distance(passenger, taxi){
     //TODO: Change to a torus configuration
     return Math.sqrt( (passenger.ox - taxi.dx)*(passenger.ox - taxi.dx) + (passenger.oy - taxi.dy)*(passenger.oy - taxi.dy) )
@@ -112,14 +125,14 @@
 
   var fEvents = [] // future events
   var pEvents = [] // past events
-  var stopTime = 10000
+  
 
   var AddEvent = {}
   var Action = {}
   var passengerQueue = []
 
   function createTaxis(){
-    for (var i = 0; i < 2; i++) {
+    for (var i = 0; i < fleet; i++) {
       var taxi = new Taxi()
       Action.goIdle(taxi)
     };
@@ -133,7 +146,9 @@
   }
 
   AddEvent.newPassenger = function(time) {
-    var delta = Math.log(1-(Math.random())/(-lambda/(width*height)))    
+    // var delta = Math.log(1-(Math.random())/(-lambda/(width*height)))    
+    var delta = Math.log(1-(Math.random()))/(-lambda)  
+    //console.log(delta) 
     var pass = new Passenger()
     function run(){
       assignTaxi(pass, time) // (i) attempts to make a taxi assignment if possible (ii) drops the new passenger in the queue
@@ -156,7 +171,7 @@
       var taxi = availableTaxis[0]
       if (taxi.state === taxiState.IN_SERVICE_AVAILABLE) {
         taxi.state = taxiState.IN_SERVICE_ASSIGNED
-        console.log("Taxi " + taxi.id + " will drop off passenger " + taxi.passenger.id + " then it will pickup passenger " + passenger.id )
+        d3.select("body").append("p").text("Taxi " + taxi.id + " will drop off passenger " + taxi.passenger.id + " then it will pickup passenger " + passenger.id +" (@"+(time/1000).toFixed(0)+")").style("color","green")
         taxi.passengerNext = passenger 
       } else { // this means the taxi was idle
         taxi.passenger = passenger
@@ -165,12 +180,12 @@
       }
     } else {
       passengerQueue.push(passenger)
-      console.log("Passenger " + passenger.id + " is waiting for the next available taxi")
+      d3.select("body").append("p").text("Passenger " + passenger.id + " is waiting for the next available taxi"+" (@"+(time/1000).toFixed(0)+")").style("color","red")
     }
   }
 
   Action.deliverPassenger = function(taxi, time) {
-    console.log("Taxi " + taxi.id + " just picked up " + taxi.passenger.id  )
+    d3.select("body").append("p").text("Taxi " + taxi.id + " just picked up passenger " + taxi.passenger.id  +" (@"+(time/1000).toFixed(0)+")")
     taxi.pickupTime = null
     taxi.ox = taxi.passenger.ox
     taxi.oy = taxi.passenger.oy
@@ -189,7 +204,7 @@
       })
       taxi.passengerNext = passengerQueue.shift() // Remove the assigned pax from the queue and assign it
       taxi.passengerNext.taxi = taxi
-      console.log("Taxi " + taxi.id + " just got assigned passenger "+ taxi.passengerNext.id + " right after pickup")
+      d3.select("body").append("p").text("Taxi " + taxi.id + " just got assigned passenger "+ taxi.passengerNext.id + " right after pickup"+" (@"+(time/1000).toFixed(0)+")")
       taxi.state = taxiState.IN_SERVICE_ASSIGNED // the taxi is now IN_SERVICE_ASSIGNED
     }
   }
@@ -215,14 +230,14 @@
     taxi.dy = taxi.passenger.oy
     taxi.pickupTime = distanceTravel(taxi) / speed + time
     taxi.state = taxiState.ASSIGNED // remember that a taxi assigned cannot be assigned a next passenger until pickup
-    console.log("Taxi " + taxi.id + " on route to pickup passenger " + taxi.passenger.id  )
+    d3.select("body").append("p").text("Taxi " + taxi.id + " on route to pickup passenger " + taxi.passenger.id  +" (@"+(time/1000).toFixed(0)+")").style("color","blue")
   }
 
   Action.goIdle = function(taxi){
     taxi.ox = taxi.dx
     taxi.oy = taxi.dy
     taxi.state = taxiState.IDLE
-    console.log("Taxi " + taxi.id + " is now idle"  )
+    d3.select("body").append("p").text("Taxi " + taxi.id + " is now idle" )
   }
 
   AddEvent.dropOff = function(taxi, passenger, time){
@@ -230,7 +245,7 @@
     // This will happen in the future
     function run(){
       taxi.dropoffTime = null
-      console.log("Taxi " + taxi.id + " just dropped off passenger "+ taxi.passenger.id  )
+      d3.select("body").append("p").text("Taxi " + taxi.id + " just dropped off passenger "+ taxi.passenger.id  +" (@"+(time/1000).toFixed(0)+")")
       ServedPassengers.push(taxi.passenger) // move the passenger to the happy customer state
       taxi.passenger = null
 
@@ -261,8 +276,6 @@
     var event = new Event(time, run, "Passenger drop off")
     fEvents.push(event)
   }
-  
-  console.log(new Date())
   
   AddEvent.newPassenger(0)
   createTaxis()
