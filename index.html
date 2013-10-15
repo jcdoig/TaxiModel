@@ -27,10 +27,6 @@
   </g>
 </svg>
 <script type='text/javascript'>
-  var width,
-    height,
-    Family = {}
-
 
   personState = {
     NOT_ASSIGNED : 0,
@@ -46,10 +42,12 @@
     IN_SERVICE_ASSIGNED : 3
   }
 
+  numTaxi = 0;
   Taxis = []
   function Taxi(){
     Taxis.push(this)
-    this.id = Taxis.indexOf(this)
+    numTaxi++
+    this.id = numTaxi
     this.ox = Math.floor((Math.random()*width)+1)
     this.oy = Math.floor((Math.random()*height)+1)
     this.dx = this.ox
@@ -86,6 +84,57 @@
   }
 
   // model parameters
+
+
+  function paint(){
+    var canvas = document.getElementById("canvas");
+    if (canvas.getContext) {
+      var ctx = canvas.getContext("2d");
+      
+      ctx.clearRect(0,0,width,height)
+      
+      ActivePassengers.forEach(function(pax){
+        ctx.strokeStyle="rgba(0,0,200,0.1)";
+        ctx.beginPath();
+        ctx.moveTo(pax.ox,pax.oy)
+        ctx.lineTo(pax.dx,pax.dy)
+        ctx.lineWidth = 5;
+        ctx.stroke();
+      })
+
+      passengerQueue.forEach(function(pax){
+        ctx.strokeStyle="rgba(255,0,0,0.1)";
+        ctx.beginPath();
+        ctx.moveTo(pax.ox,pax.oy)
+        ctx.lineTo(pax.dx,pax.dy)
+        ctx.lineWidth = 5;
+        ctx.stroke();
+      })
+
+      ctx.strokeStyle="black";
+      Taxis.forEach(function(taxi){
+        ctx.fillStyle = "rgb(200,0,0)";
+        ctx.beginPath();
+        ctx.arc(taxi.ox,taxi.oy,5,0,Math.PI*2,true);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(taxi.ox,taxi.oy)
+        ctx.lineTo(taxi.dx,taxi.dy)
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(0,0,200,0.5)";
+        ctx.beginPath();
+        ctx.arc(taxi.dx,taxi.dy,5,0,Math.PI*2,true);
+        ctx.fill();
+      })
+
+      
+    }  
+  }
+  
+
 
   var networkWidth = 5 // miles
   var networkHeight = 5 // miles
@@ -146,7 +195,7 @@
   }
 
   AddEvent.newPassenger = function(time) {
-    // var delta = Math.log(1-(Math.random())/(-lambda/(width*height)))    
+ 
     var delta = Math.log(1-(Math.random()))/(-lambda)  
     //console.log(delta) 
     var pass = new Passenger()
@@ -246,6 +295,8 @@
     function run(){
       taxi.dropoffTime = null
       d3.select("body").append("p").text("Taxi " + taxi.id + " just dropped off passenger "+ taxi.passenger.id  +" (@"+(time/1000).toFixed(0)+")")
+      var passengerID = ActivePassengers.indexOf(taxi.passenger)
+      ActivePassengers.splice(passengerID,1)
       ServedPassengers.push(taxi.passenger) // move the passenger to the happy customer state
       taxi.passenger = null
 
@@ -284,7 +335,7 @@
     var event = fEvents.shift()
     event.Run()
     pEvents.push(event)
-
+    paint()
     var should_stop
     try {
       should_stop = (d3.min(fEvents.map(function(d){return d.Time})) > stopTime)
