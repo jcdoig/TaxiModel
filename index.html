@@ -7,16 +7,93 @@
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta charset="utf-8">
 
   <script src="./files/d3.v3.min.js"></script>
+  <script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.min.js"></script>
   
   <style type="text/css">
   @import url(./files/style.css);
   @import url(//fonts.googleapis.com/css?family=Yanone+Kaffeesatz:400,700);
+
+
+  body {
+  font: 10px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.bar {
+  fill: orange;
+}
+
+.bar:hover {
+  fill: orangered ;
+}
+
+.x.axis path {
+  display: none;
+}
+
+.d3-tip {
+  line-height: 1;
+  font-weight: bold;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  border-radius: 2px;
+}
+
+/* Creates a small triangle extender for the tooltip */
+.d3-tip:after {
+  box-sizing: border-box;
+  display: inline;
+  font-size: 10px;
+  width: 100%;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.8);
+  content: "\25BC";
+  position: absolute;
+  text-align: center;
+}
+
+/* Style northward tooltips differently */
+.d3-tip.n:after {
+  margin: -1px 0 0 0;
+  top: 100%;
+  left: 0;
+}
+
+#slider {
+  position: fixed;
+  top: 0%;
+  left: 0%;
+  height: 50px;
+  width: 100%;
+  background-color: white;
+}
+
+.line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 1.5px;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
   </style>
 
 </head>
 
 <body>
-
+<div id="slider"></div>
 <svg xmlns:svg="http://www.w3.org/2000/svg" id="display" width="550" height="550">
   <g id="svg">
     <foreignObject xmlns="http://www.w3.org/2000/svg" height="500" width="500" y="25" x="25">
@@ -26,6 +103,9 @@
     </foreignObject>
   </g>
 </svg>
+<script type="text/javascript" src="./files/distribution.js"></script>
+<script type="text/javascript" src="./files/vehDist.js"></script>
+<script type="text/javascript" src="./files/slider.js"></script>
 <script type='text/javascript'>
 
   personState = {
@@ -141,7 +221,7 @@
   var networkSpeed = 20 // miles per hour
   var networkDemand = 300 // passengers per hour
 
-  var stopTime = 1000*3600
+  var stopTime = 1000*3600*2
 
   var pixelDensity = 100 // pixels per mile
 
@@ -152,7 +232,7 @@
 
   var lambda = networkDemand / (3600000) // in passengers per millisecond per network.
 
-  var fleet = 50 // number of taxis
+  var fleet = 70 // number of taxis
 
 
   d3.select("body").append("p").text("Simulating a network of "+networkWidth+" miles by "+networkHeight+" miles during "+(stopTime/1000)+" seconds")
@@ -160,7 +240,8 @@
   
   function distance(passenger, taxi){
     //TODO: Change to a torus configuration
-    return Math.sqrt( (passenger.ox - taxi.dx)*(passenger.ox - taxi.dx) + (passenger.oy - taxi.dy)*(passenger.oy - taxi.dy) )
+    //return Math.sqrt( (passenger.ox - taxi.dx)*(passenger.ox - taxi.dx) + (passenger.oy - taxi.dy)*(passenger.oy - taxi.dy) )
+    return Math.abs( passenger.ox - taxi.dx) + Math.abs(passenger.oy - taxi.dy)
   }
 
   function distanceTravel(taxi){
@@ -330,10 +411,25 @@
   
   AddEvent.newPassenger(0)
   createTaxis()
+  var vehDistData = []
   d3.timer(function(){
     fEvents.sort(function(a,b){return a.Time-b.Time})
     var event = fEvents.shift()
     event.Run()
+    d3.values(taxiState).forEach(function(stateCode){
+      vehDistData.push({
+        count: Taxis.filter(function(d){return d.state === stateCode }).length,
+        time: event.Time,
+        name: stateCode
+      })
+    })
+
+    var nest = d3.nest()
+      .key(function(d) { return d.name; })
+      .entries(vehDistData);
+
+    vehDist.update(nest)
+
     pEvents.push(event)
     paint()
     var should_stop
@@ -342,7 +438,9 @@
     } catch(err) {
       should_stop = false
     }
-    if (should_stop) {console.log(new Date())}
+    if (should_stop) {
+      console.log(nest)
+      }
     return should_stop
   })
 </script>
