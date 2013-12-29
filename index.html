@@ -10,103 +10,98 @@
   <script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.min.js"></script>
   
   <style type="text/css">
-  @import url(./files/style.css);
-  @import url(//fonts.googleapis.com/css?family=Yanone+Kaffeesatz:400,700);
+    @import url(./files/style.css);
+    @import url(//fonts.googleapis.com/css?family=Yanone+Kaffeesatz:400,700);
 
 
-  body {
-  font: 10px sans-serif;
-}
+    body {
+    font: 10px sans-serif;
+    }
 
-.axis path,
-.axis line {
-  fill: none;
-  stroke: #000;
-  shape-rendering: crispEdges;
-}
+    .axis path,
+    .axis line {
+      fill: none;
+      stroke: #000;
+      shape-rendering: crispEdges;
+    }
 
-.bar {
-  fill: orange;
-}
+    .bar {
+      fill: orange;
+    }
 
-.bar:hover {
-  fill: orangered ;
-}
+    .bar:hover {
+      fill: orangered ;
+    }
 
-.x.axis path {
-  display: none;
-}
+    .d3-tip {
+      line-height: 1;
+      font-weight: bold;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      border-radius: 2px;
+    }
 
-.d3-tip {
-  line-height: 1;
-  font-weight: bold;
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.8);
-  color: #fff;
-  border-radius: 2px;
-}
+    /* Creates a small triangle extender for the tooltip */
+    .d3-tip:after {
+      box-sizing: border-box;
+      display: inline;
+      font-size: 10px;
+      width: 100%;
+      line-height: 1;
+      color: rgba(0, 0, 0, 0.8);
+      content: "\25BC";
+      position: absolute;
+      text-align: center;
+    }
 
-/* Creates a small triangle extender for the tooltip */
-.d3-tip:after {
-  box-sizing: border-box;
-  display: inline;
-  font-size: 10px;
-  width: 100%;
-  line-height: 1;
-  color: rgba(0, 0, 0, 0.8);
-  content: "\25BC";
-  position: absolute;
-  text-align: center;
-}
+    /* Style northward tooltips differently */
+    .d3-tip.n:after {
+      margin: -1px 0 0 0;
+      top: 100%;
+      left: 0;
+    }
 
-/* Style northward tooltips differently */
-.d3-tip.n:after {
-  margin: -1px 0 0 0;
-  top: 100%;
-  left: 0;
-}
+    #slider {
+      position: fixed;
+      top: 0%;
+      left: 0%;
+      height: 50px;
+      width: 100%;
+      background-color: white;
+    }
 
-#slider {
-  position: fixed;
-  top: 0%;
-  left: 0%;
-  height: 50px;
-  width: 100%;
-  background-color: white;
-}
+    .line {
+      fill: none;
+      stroke: steelblue;
+      stroke-width: 1.5px;
+    }
 
-.line {
-  fill: none;
-  stroke: steelblue;
-  stroke-width: 1.5px;
-}
+    .axis path,
+    .axis line {
+      fill: none;
+      stroke: #000;
+      shape-rendering: crispEdges;
+    }
 
-.axis path,
-.axis line {
-  fill: none;
-  stroke: #000;
-  shape-rendering: crispEdges;
-}
-
+    #canvas{
+      border-style:solid;
+      border-width:2px;
+      border-color:navy;
+      margin-top:50px;
+      
+    }
   </style>
-
 </head>
 
 <body>
-<div id="slider"></div>
-<svg xmlns:svg="http://www.w3.org/2000/svg" id="display" width="550" height="550">
-  <g id="svg">
-    <foreignObject xmlns="http://www.w3.org/2000/svg" height="500" width="500" y="25" x="25">
-      <canvas id="canvas" xmlns="http://www.w3.org/1999/xhtml" width="500" height="500">
-      
-      </canvas>
-    </foreignObject>
-  </g>
-</svg>
-<script type="text/javascript" src="./files/distribution.js"></script>
-<script type="text/javascript" src="./files/vehDist.js"></script>
-<script type="text/javascript" src="./files/slider.js"></script>
-<script type='text/javascript'>
+  <div id="slider"></div>
+  <canvas id="canvas" xmlns="http://www.w3.org/1999/xhtml" width="500" height="500"> 
+  </canvas>
+  <script type="text/javascript" src="./files/distribution.js"></script>
+  <script type="text/javascript" src="./files/vehDist.js"></script>
+  <script type="text/javascript" src="./files/slider.js"></script>
+  <script type='text/javascript'>
 
   personState = {
     NOT_ASSIGNED : 0,
@@ -219,7 +214,7 @@
   var networkWidth = 5 // miles
   var networkHeight = 5 // miles
   var networkSpeed = 20 // miles per hour
-  var networkDemand = 300 // passengers per hour
+  var networkDemand = 900 // passengers per hour
 
   var stopTime = 1000*3600*2
 
@@ -232,7 +227,7 @@
 
   var lambda = networkDemand / (3600000) // in passengers per millisecond per network.
 
-  var fleet = 70 // number of taxis
+  var fleet = 200 // number of taxis
 
 
   d3.select("body").append("p").text("Simulating a network of "+networkWidth+" miles by "+networkHeight+" miles during "+(stopTime/1000)+" seconds")
@@ -276,7 +271,9 @@
   }
 
   AddEvent.newPassenger = function(time) {
- 
+    
+    paintDistribution(distanceLeft(time))
+
     var delta = Math.log(1-(Math.random()))/(-lambda)  
     //console.log(delta) 
     var pass = new Passenger()
@@ -312,6 +309,13 @@
       passengerQueue.push(passenger)
       d3.select("body").append("p").text("Passenger " + passenger.id + " is waiting for the next available taxi"+" (@"+(time/1000).toFixed(0)+")").style("color","red")
     }
+  }
+
+  function distanceLeft(time){
+    var inServiceAvailableTaxis = Taxis.filter(function(taxi){ return (taxi.state === taxiState.IN_SERVICE_AVAILABLE)})
+    distanceArray = inServiceAvailableTaxis.map(function(taxi){return speed * (taxi.dropoffTime - time)})
+    console.log(distanceArray)
+    return distanceArray
   }
 
   Action.deliverPassenger = function(taxi, time) {
@@ -428,7 +432,7 @@
       .key(function(d) { return d.name; })
       .entries(vehDistData);
 
-    vehDist.update(nest)
+    vehDist.update(nest,fleet)
 
     pEvents.push(event)
     paint()

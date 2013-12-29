@@ -3,7 +3,7 @@ var vehDist = function(){
 
   var margin = {top: 20, right: 80, bottom: 30, left: 50},
       width = 960 - margin.left - margin.right,
-      height = 500 - margin.top - margin.bottom;
+      height = 300 - margin.top - margin.bottom;
 
   var x = d3.scale.linear()
       .range([0, width]);
@@ -32,11 +32,11 @@ var vehDist = function(){
     .append("g")
       .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-  figure.update = function(data){
+  figure.update = function(data,fleetSize){
 
     x.domain([0,3600000*2]);
 
-    y.domain([0,100]);
+    y.domain([0,fleetSize]);
 
     color.domain(data.map(function(d){return d.key}))
 

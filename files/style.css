@@ -94,10 +94,6 @@ h1, h2 {
   shape-rendering: crispEdges;
 }
 
-.x.axis path {
-  display: none;
-}
-
 .area {
   fill: steelblue;
 }
